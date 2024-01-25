@@ -1,0 +1,47 @@
+{
+  "start": {
+    "cmd": "deno run --allow-all --reload ./src/app.ts",
+    "desc": "Run the server"
+  },
+  "imports": {
+    "socket.io": "npm:socket.io",
+    "luxon" : "npm:luxon",
+    "ioredis" : "npm:ioredis"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window"
+    ],
+    "strict": true
+  },
+  "lint": {
+    "include": [
+      "src/"
+    ],
+    "exclude": [],
+    "rules": {}
+  },
+  "tasks": {
+    "fmt": "deno fmt --check",
+    "lint": "deno lint --json",
+    "cache": "deno cache --reload ./src/app.ts",
+    "cmd": "PORT=5000 deno run --allow-all --watch ./src/app.ts",
+    "dev": "deno task fmt && deno task lint && deno task cmd"
+  },
+  "fmt": {
+    "semiColons": false,
+    "singleQuote": true,
+    "lineWidth": 120,
+    "indentWidth": 2,
+    "useTabs": false,
+    "include": [
+      "src/"
+    ],
+    "exclude": [
+      ".vscode/*",
+      "deno.json",
+      "src/env.json",
+      "src/modules/connected/connected.interface.ts"
+    ]
+  }
+}
