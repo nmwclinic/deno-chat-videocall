@@ -5,8 +5,8 @@
   },
   "imports": {
     "socket.io": "npm:socket.io",
-    "luxon" : "npm:luxon",
-    "ioredis" : "npm:ioredis"
+    "luxon": "npm:luxon",
+    "ioredis": "npm:ioredis"
   },
   "compilerOptions": {
     "lib": [
@@ -25,7 +25,7 @@
     "fmt": "deno fmt --check",
     "lint": "deno lint --json",
     "cache": "deno cache --reload ./src/app.ts",
-    "cmd": "PORT=5000 deno run --allow-all --watch ./src/app.ts",
+    "cmd": "PORT=8000 deno run --allow-all --watch ./src/app.ts",
     "dev": "deno task fmt && deno task lint && deno task cmd"
   },
   "fmt": {

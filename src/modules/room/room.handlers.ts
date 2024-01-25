@@ -3,12 +3,13 @@ import { DateTime } from 'luxon'
 import { type Server, type Socket } from 'socket.io'
 import History from '../history-chat/history-chat.services.ts'
 import HandleError from '../../utils/error.ts'
-import { redisConnection } from '../../configs/redis.ts'
+import RedisProvider from '../../configs/redis.ts'
 import { type Message } from '../socket/socket.interface.ts'
 import Connected from '../connected/connected.handlers.ts'
+import ENV from '../../env.json' with { type: 'json' }
 
 const handler = (io: Server, socket: Socket): void => {
-  const memberChat = io.of('/chat')
+  const memberChat = io.of(ENV.SOCKET_PATH.MEMBER)
   socket.on('join_room', async (room: string) => {
     try {
       if (socket.room !== undefined) await socket.leave(socket.room)
@@ -36,7 +37,6 @@ const handler = (io: Server, socket: Socket): void => {
 
       const getUserInRoom = memberChat.adapter.rooms.get(socket.room)
       if (getUserInRoom === undefined) throw new Error('Cannot get user in room')
-      console.log(getUserInRoom)
       const userInRoom: Types.ObjectId[] = []
       for (const user of [...getUserInRoom.values()]) {
         const infoUser = memberChat.sockets.get(user)
@@ -46,40 +46,11 @@ const handler = (io: Server, socket: Socket): void => {
         }
       }
 
-      let content
-      switch (event.type) {
-        case 'TEXT':
-          content = {
-            text: event.content.text,
-            url: null,
-            alt: null,
-            ext: null,
-          }
-          break
-        case 'IMAGE':
-          content = {
-            text: event.content.text,
-            url: event.content.image.url,
-            alt: event.content.image.alt,
-            ext: null,
-          }
-          break
-        case 'FILE':
-          content = {
-            text: event.content.text,
-            url: event.content.image.url,
-            alt: event.content.image.alt,
-            ext: null,
-          }
-          break
-        default:
-          content = {
-            text: event.content.text,
-            url: null,
-            alt: null,
-            ext: null,
-          }
-          break
+      const content = {
+        text: event.content.text ?? null,
+        url: event.content.url ?? null,
+        alt: event.content.alt ?? null,
+        ext: event.content.ext ?? null,
       }
 
       const newMessage = {
@@ -103,7 +74,7 @@ const handler = (io: Server, socket: Socket): void => {
       })
 
       // Save the chat message to the history for the current room
-      await redisConnection.lpush(`chat-room:${socket.room}`, JSON.stringify(newMessage))
+      await RedisProvider.getConnection().lpush(`chat-room:${socket.room}`, JSON.stringify(newMessage))
 
       memberChat.emit('connected_users', await Connected.setConnectedUsers(socket))
     } catch (error: unknown) {
@@ -151,40 +122,11 @@ const Guest = (io: Server, socket: Socket): void => {
         }
       }
 
-      let content
-      switch (event.type) {
-        case 'TEXT':
-          content = {
-            text: event.content.text,
-            url: null,
-            alt: null,
-            ext: null,
-          }
-          break
-        case 'IMAGE':
-          content = {
-            text: event.content.text,
-            url: event.content.image.url,
-            alt: event.content.image.alt,
-            ext: null,
-          }
-          break
-        case 'FILE':
-          content = {
-            text: event.content.text,
-            url: event.content.image.url,
-            alt: event.content.image.alt,
-            ext: null,
-          }
-          break
-        default:
-          content = {
-            text: event.content.text,
-            url: null,
-            alt: null,
-            ext: null,
-          }
-          break
+      const content = {
+        text: event.content.text ?? null,
+        url: event.content.url ?? null,
+        alt: event.content.alt ?? null,
+        ext: event.content.ext ?? null,
       }
 
       const newMessage = {
@@ -208,7 +150,7 @@ const Guest = (io: Server, socket: Socket): void => {
       })
 
       // Save the chat message to the history for the current room
-      await redisConnection.lpush(`chat-room:${socket.room}`, JSON.stringify(newMessage))
+      await RedisProvider.getConnection().lpush(`chat-room:${socket.room}`, JSON.stringify(newMessage))
 
       guestChat.emit('connected_users', await Connected.setConnectedUsers(socket))
     } catch (error: unknown) {

@@ -2,14 +2,14 @@ import { DateTime } from 'luxon'
 import { type NewMessage } from '../../models/chat.ts'
 import { history, type ResponseHistoryRoom } from './history-chat.interface.ts'
 import HandleError from '../../utils/error.ts'
-import { redisConnection } from '../../configs/redis.ts'
+import RedisProvider from '../../configs/redis.ts'
 import Env from '../../env.json' with { type: 'json' }
 import axios from 'npm:axios'
 
 const retrieveChat = async (room: string, token: string, user: string): Promise<ResponseHistoryRoom[]> => {
   let mapped_historys
   try {
-    const historyRedis = await redisConnection.lrange(`chat-room:${room}`, 0, -1)
+    const historyRedis = await RedisProvider.getConnection().lrange(`chat-room:${room}`, 0, -1)
     if (historyRedis.length === 0) {
       const response = await axios.get(Env.APP_URL.PARENT_URL + Env.APP_URL.HISTORY + `?roomId=${room}`, {
         headers: {
@@ -38,7 +38,7 @@ const retrieveChat = async (room: string, token: string, user: string): Promise<
         return JSON.stringify(object)
       })
 
-      if (save_redis.length > 0) await redisConnection.lpush(`chat-room:${room}`, ...save_redis)
+      if (save_redis.length > 0) await RedisProvider.getConnection().lpush(`chat-room:${room}`, ...save_redis)
     } else {
       mapped_historys = historyRedis.map((object) => JSON.parse(object))
         .sort((a, b) =>

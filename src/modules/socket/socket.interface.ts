@@ -37,14 +37,9 @@ export interface Message {
   type: TypeMessage
   content: {
     text: string
-    image: {
-      url: string
-      alt: string
-    }
-    file: {
-      url: string
-      alt: string
-    }
+    url: string
+    alt: string
+    ext: string
   }
 }
 

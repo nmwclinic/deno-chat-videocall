@@ -1,18 +1,15 @@
-import { connect } from 'https://deno.land/x/redis@v0.32.1/mod.ts'
+import Rediss from 'ioredis'
 import Env from '../env.json' with { type: 'json' }
 
-const redisUrl = new URL(Env.REDIS)
-const redisConnection = await connect({
-  hostname: redisUrl.hostname,
-  port: parseInt(redisUrl.port || '6379'),
-  db: parseInt(redisUrl.pathname.substr(1) || '0'),
-})
-const connects = async (): Promise<void> => {
-  await redisConnection.connect()
-  {
+const redisConnections = new Rediss.Redis(Env.REDIS)
+
+const connect = (): void => {
+  redisConnections.on('connect', () => {
     console.info('Connected to Redist')
-  }
+  })
 }
 
-const Database = { connects }
-export { Database, redisConnection }
+const getConnection = (): Rediss.Redis => redisConnections
+
+const RedisProvider = { connect, getConnection }
+export default RedisProvider

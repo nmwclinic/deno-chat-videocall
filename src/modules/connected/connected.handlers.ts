@@ -1,5 +1,5 @@
 import { type Server, type Socket } from 'socket.io'
-import { redisConnection } from '../../configs/redis.ts'
+import RedisProvider from '../../configs/redis.ts'
 import { type ConnectedUsers, type DetailUserChat } from '../socket/socket.interface.ts'
 import HandleError from '../../utils/error.ts'
 import axiod from 'https://deno.land/x/axiod@0.26.2/mod.ts'
@@ -25,7 +25,7 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
     if (typeof socket.userInfo !== 'object') throw new Error('Cannot get user info')
 
     const connected_users_room: ConnectedUsers[] = []
-    const connected_users = await redisConnection.hgetall('connected_users')
+    const connected_users = await RedisProvider.getConnection().hgetall('connected_users')
     for (const cu in connected_users) {
       const exists = connected_users[cu]
       if (exists !== undefined) {
@@ -35,12 +35,13 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
         }
       }
     }
-    console.log(connected_users_room)
+
     const response = await axios.get(Env.APP_URL.PARENT_URL + Env.APP_URL.LIST_USER, {
       headers: {
         Authorization: 'Bearer ' + socket.handshake.auth.token,
       },
     })
+
     let users: DetailUserChat[] = response.data.result.map((object: DetailUserChat) => {
       return {
         type: object.type,
@@ -58,6 +59,7 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
           : null,
       }
     })
+
     //!! problem disini
     users = users.filter((object) => object.userDetail.id !== undefined)
     const mapped_connected = users.map(async (object) => {
@@ -70,7 +72,11 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
         : Env.APP_URL.PARENT_URL + object.userDetail.image
 
       if (connected !== undefined) {
-        let last_chat: string[] | string | undefined = await redisConnection.lrange(`chat-room:${connected.room}`, 0, 1)
+        let last_chat: string[] | string | undefined = await RedisProvider.getConnection().lrange(
+          `chat-room:${connected.room}`,
+          0,
+          1,
+        )
         if (last_chat === undefined) { /* empty */ }
 
         last_chat = last_chat[0]
@@ -91,7 +97,6 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
     // const guest = users.filter((object)=> object.type === 'GUEST').map(async(object)=> {
     //   const connected = connected_users_room.find((element)=> )
     // })
-
     return await Promise.all(mapped_connected)
   } catch (error: unknown) {
     throw HandleError.message(error)
@@ -99,8 +104,7 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
 }
 
 const listUsers = async (io: Server, socket: Socket): Promise<void> => {
-  const memberChat = io.of('/chat')
-  const guestChat = io.of('/guest')
+  const memberChat = io.of(Env.SOCKET_PATH.MEMBER)
   try {
     if (typeof socket.userInfo !== 'object') throw new Error('Cannot get user info')
 
@@ -109,10 +113,10 @@ const listUsers = async (io: Server, socket: Socket): Promise<void> => {
       id: socket.userInfo.id,
       room: socket.userInfo.room,
     }
-    await redisConnection.hset('connected_users', socket.userInfo.id, JSON.stringify(info_user))
+
+    await RedisProvider.getConnection().hset('connected_users', socket.userInfo.id, JSON.stringify(info_user))
     const connected_users = await setConnectedUsers(socket)
     memberChat.emit('connected_users', connected_users)
-    guestChat.emit('connected_users', connected_users)
   } catch (error: unknown) {
     HandleError.emitClient(socket, error)
   }
@@ -121,22 +125,23 @@ const listUsers = async (io: Server, socket: Socket): Promise<void> => {
 const handler = (io: Server, socket: Socket): void => {
   void listUsers(io, socket)
   // Filterring name user or message
-  const memberChat = io.of('/chat')
-  const guestChat = io.of('/guest')
-  memberChat.on('connected_users', async (filter): Promise<void> => {
+
+  const memberChat = io.of(Env.SOCKET_PATH.MEMBER)
+  socket.on('connected_users', async (filter): Promise<void> => {
     try {
       if (typeof filter !== 'string') throw new Error('Filter must be string')
-
       const responses = await axiod.get(Env.APP_URL.PARENT_URL + Env.APP_URL.LIST_USER, {
         headers: {
           Authorization: `Bearer ${socket.handshake.auth.token}`,
         },
       })
+
       const response: DetailUserChat[] = responses.data.result.map((object: DetailUserChat) => ({
         room: object.room,
         userDetail: object.userDetail,
         conversation: object.conversation,
       }))
+
       if (response.length > 0) {
         for (let index = 0; index < response.length; index++) {
           const chat_exists = response[index]
@@ -148,8 +153,8 @@ const handler = (io: Server, socket: Socket): void => {
           }
         }
       }
+
       memberChat.to(socket.id).emit('connected_users', response)
-      guestChat.to(socket.id).emit('connected_users', response)
     } catch (error: unknown) {
       HandleError.emitClient(socket, error)
     }
