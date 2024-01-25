@@ -14,8 +14,7 @@ const validationParse = (value: string): boolean => {
   try {
     JSON.parse(value)
     return true
-    // deno-lint-ignore no-unused-vars
-  } catch (error) {
+  } catch (_) {
     return false
   }
 }
@@ -81,7 +80,7 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
 
         last_chat = last_chat[0]
         if (last_chat !== undefined) {
-          object.conversation.message = JSON.parse(last_chat).message
+          object.conversation.message = JSON.parse(last_chat).content.text
           object.conversation.createdAt = JSON.parse(last_chat).createdAt
         }
       }
@@ -116,6 +115,7 @@ const listUsers = async (io: Server, socket: Socket): Promise<void> => {
 
     await RedisProvider.getConnection().hset('connected_users', socket.userInfo.id, JSON.stringify(info_user))
     const connected_users = await setConnectedUsers(socket)
+
     memberChat.emit('connected_users', connected_users)
   } catch (error: unknown) {
     HandleError.emitClient(socket, error)

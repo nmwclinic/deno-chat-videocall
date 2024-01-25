@@ -4,7 +4,7 @@ import jwt, { JwtPayload, VerifyErrors } from 'npm:jsonwebtoken'
 import ENV from '../env.json' with { type: 'json' }
 import { UserInfo } from '../modules/socket/socket.interface.ts'
 import HandleError from '../utils/error.ts'
-// import axios from 'npm:axios'
+import axios from 'npm:axios'
 
 const verifyToken = async (socket: Socket, next: (err?: Error) => void): Promise<void> => {
   const token: string | undefined | null = socket.handshake.auth['token']
@@ -14,19 +14,22 @@ const verifyToken = async (socket: Socket, next: (err?: Error) => void): Promise
   }
   if (token === null) {
     next(HandleError.middleware(403, 'Forbiden token not exists', socket.handshake.headers))
+    return
   }
+
   //* check user exists on db
-  // const exists = await axios.get(
-  //   ENV.APP_URL.PARENT_URL + ENV.APP_URL.AUTH_USER,
-  //   {
-  //     headers: {
-  //       Authorization: `Bearer ${socket.handshake.auth.token}`,
-  //     },
-  //   },
-  // )
-  // if (!exists) {
-  //   next(HandleError.middleware(403, 'Forbiden token not exists', socket.handshake.headers))
-  // }
+  const exists = await axios.get(
+    ENV.APP_URL.PARENT_URL + ENV.APP_URL.AUTH_USER,
+    {
+      headers: {
+        Authorization: `Bearer ${socket.handshake.auth.token}`,
+      },
+    },
+  )
+  if (!exists) {
+    next(HandleError.middleware(403, 'Forbiden token not exists', socket.handshake.headers))
+  }
+
   await jwt.verify(token, ENV.APP_KEY, (err: VerifyErrors, decoded: string | JwtPayload | undefined) => {
     if (err !== null) {
       next(HandleError.middleware(401, 'Membutuhkan Authorization', socket.handshake.headers))

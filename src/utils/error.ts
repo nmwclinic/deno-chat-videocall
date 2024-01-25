@@ -21,6 +21,7 @@ const emitClient = (socket: Socket, error: unknown): void => {
     `MSG: ${error_msg}`,
     `AGENT: ${socket.handshake.headers['user-agent']}`,
   )
+  console.error(error)
 }
 
 const message = (error: unknown): Error => {
@@ -41,6 +42,7 @@ const middleware = (code: number, msg: string, headers: IncomingHttpHeaders): Er
     `MSG: ${msg}`,
     `AGENT: ${headers['user-agent']}`,
   )
+  console.error(error)
   return error
 }
 

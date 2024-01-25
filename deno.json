@@ -25,8 +25,9 @@
     "fmt": "deno fmt --check",
     "lint": "deno lint --json",
     "cache": "deno cache --reload ./src/app.ts",
-    "cmd": "PORT=8000 deno run --allow-all --watch ./src/app.ts",
-    "dev": "deno task fmt && deno task lint && deno task cmd"
+    "cmd": "PORT=8000 denon run --allow-all --watch ./src/app.ts",
+    "dev": "deno task fmt && deno task lint && deno task cmd",
+    "build": "deno compile -A --import-map=deno.json --config=src/env.json --output app src/app.ts"
   },
   "fmt": {
     "semiColons": false,

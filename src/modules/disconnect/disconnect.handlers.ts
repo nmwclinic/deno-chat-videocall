@@ -39,7 +39,7 @@ const handler = (io: Server, socket: Socket): void => {
       if (socket.userInfo !== undefined && socket.room !== undefined) await socket.leave(socket.room)
 
       if (socket.userInfo === undefined) throw new Error('')
-      // await redisConnection.hdel('connected_users', socket.userInfo.id)
+      await RedisProvider.getConnection().hdel('connected_users', socket.userInfo.id)
 
       await backupChatToMongo()
 

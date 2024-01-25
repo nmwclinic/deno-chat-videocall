@@ -1,7 +1,0 @@
-{
-    "imports": {
-      "#src/": "./src/",
-      "#types": "./src/types/index.ts"
-    }
-  }
-  

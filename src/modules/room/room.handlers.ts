@@ -37,6 +37,7 @@ const handler = (io: Server, socket: Socket): void => {
 
       const getUserInRoom = memberChat.adapter.rooms.get(socket.room)
       if (getUserInRoom === undefined) throw new Error('Cannot get user in room')
+
       const userInRoom: Types.ObjectId[] = []
       for (const user of [...getUserInRoom.values()]) {
         const infoUser = memberChat.sockets.get(user)
