@@ -46,8 +46,8 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
         type: object.type,
         room: object.room,
         userDetail: {
-          id: object.userDetail.id,
-          name: object.userDetail.name,
+          id: object.userDetail.id ? object.userDetail.id : object.owner,
+          name: object.userDetail.name ? object.userDetail.name : 'GUEST ' + object.owner,
           image: object.userDetail.image,
         },
         conversation: object.conversation
@@ -58,7 +58,6 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
           : null,
       }
     })
-
     //!! problem disini
     users = users.filter((object) => object.userDetail.id !== undefined)
     const mapped_connected = users.map(async (object) => {
@@ -93,9 +92,6 @@ const setConnectedUsers = async (socket: Socket): Promise<DetailUserChat[]> => {
         conversation: object.conversation,
       }
     })
-    // const guest = users.filter((object)=> object.type === 'GUEST').map(async(object)=> {
-    //   const connected = connected_users_room.find((element)=> )
-    // })
     return await Promise.all(mapped_connected)
   } catch (error: unknown) {
     throw HandleError.message(error)
@@ -125,10 +121,18 @@ const listUsers = async (io: Server, socket: Socket): Promise<void> => {
 const handler = (io: Server, socket: Socket): void => {
   void listUsers(io, socket)
   // Filterring name user or message
-
   const memberChat = io.of(Env.SOCKET_PATH.MEMBER)
+  // io.engine.generateId = function(req) {
+  //   return new Promise(function(resolve, reject){
+  //     let id
+  //   })
+  // }
   socket.on('connected_users', async (filter): Promise<void> => {
     try {
+      const member = await memberChat.fetchSockets()
+      for (const socket of member) {
+        console.log(socket.data)
+      }
       if (typeof filter !== 'string') throw new Error('Filter must be string')
       const responses = await axiod.get(Env.APP_URL.PARENT_URL + Env.APP_URL.LIST_USER, {
         headers: {

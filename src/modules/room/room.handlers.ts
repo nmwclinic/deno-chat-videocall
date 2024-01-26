@@ -37,8 +37,7 @@ const handler = (io: Server, socket: Socket): void => {
 
       const getUserInRoom = memberChat.adapter.rooms.get(socket.room)
       if (getUserInRoom === undefined) throw new Error('Cannot get user in room')
-
-      const userInRoom: Types.ObjectId[] = []
+      const userInRoom: Types.ObjectId[] & string[] = []
       for (const user of [...getUserInRoom.values()]) {
         const infoUser = memberChat.sockets.get(user)
 
@@ -84,6 +83,21 @@ const handler = (io: Server, socket: Socket): void => {
   })
 }
 
+const moveUser = (io: Server, socket: Socket): void => {
+  const memberChat = io.of(ENV.SOCKET_PATH.MEMBER)
+  memberChat.on('moveUser', (room) => {
+    socket.on('moveUserToRoom', (data: { userId: string; newRoom: string }) => {
+      const { userId, newRoom } = data
+      const userSocket = io.sockets.sockets.get(userId)
+
+      if (userSocket) {
+        userSocket.leave(room)
+      }
+      memberChat.in(userId).socketsJoin(newRoom)
+    })
+  })
+}
+
 const Guest = (io: Server, socket: Socket): void => {
   const guestChat = io.of('/guest')
   socket.on('join_room', async (room: string) => {
@@ -92,12 +106,6 @@ const Guest = (io: Server, socket: Socket): void => {
 
       await socket.join(room)
       socket.room = room
-
-      // Retrieve chat history for the current room
-      const user: string = socket.userInfo?.id ?? ''
-      const history = await History.retrieveChat(room, socket.handshake.auth.token, user)
-      // Should this change socket.room to socket.id
-      guestChat.to(socket.room).emit('history_message_room', history)
     } catch (error: unknown) {
       HandleError.emitClient(socket, error)
     }
@@ -111,15 +119,15 @@ const Guest = (io: Server, socket: Socket): void => {
         throw new Error('Cannot send message cause room not defined')
       }
 
-      const getUserInRoom = io.sockets.adapter.rooms.get(socket.room)
+      const getUserInRoom = guestChat.adapter.rooms.get(socket.room)
       if (getUserInRoom === undefined) throw new Error('Cannot get user in room')
 
-      const userInRoom: Types.ObjectId[] = []
+      const userInRoom: Types.ObjectId[] & string[] = []
       for (const user of [...getUserInRoom.values()]) {
-        const infoUser = io.sockets.sockets.get(user)
+        const infoUser = guestChat.sockets.get(user)
 
         if (infoUser?.userInfo !== undefined) {
-          userInRoom.push(new Types.ObjectId(infoUser.userInfo.id))
+          userInRoom.push(infoUser.userInfo.id)
         }
       }
 
@@ -162,3 +170,4 @@ const Guest = (io: Server, socket: Socket): void => {
 
 export const Room = { handler: handler }
 export const GuestRoom = { handler: Guest }
+export const moveUserToRoom = { handler: moveUser }

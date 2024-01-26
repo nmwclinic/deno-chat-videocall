@@ -4,7 +4,7 @@ import { TypeMessage } from '../../models/chat.ts'
 interface UserDetail {
   id: string
   fullName: string
-  marketplace: {
+  marketplace?: {
     id: string
     name: string
   }
@@ -22,6 +22,7 @@ export interface ConnectedUsers {
 export interface DetailUserChat {
   type: string
   room: string
+  owner?: string
   userDetail: {
     id: string
     name: string

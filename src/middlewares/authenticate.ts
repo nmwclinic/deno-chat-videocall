@@ -46,5 +46,18 @@ const verifyToken = async (socket: Socket, next: (err?: Error) => void): Promise
   })
 }
 
+const verifyGuest = (socket: Socket, next: (err?: Error) => void) => {
+  socket.userInfo = {
+    id: socket.handshake.auth.id,
+    fullName: socket.handshake.auth.fullName,
+    room: socket.handshake.auth.room,
+  }
+  if (socket.userInfo.room !== undefined) {
+    next(HandleError.middleware(403, 'Room not exist', socket.handshake.headers))
+  }
+  next()
+}
+
 const Authenticate = { verifyToken: verifyToken }
+export const AuthenticateGuest = { verify: verifyGuest }
 export default Authenticate

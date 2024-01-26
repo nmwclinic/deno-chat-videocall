@@ -2,13 +2,14 @@ import { Server, Socket } from 'socket.io'
 import { createServer } from 'node:http'
 import RedisProvider from './configs/redis.ts'
 import Authenticate from './middlewares/authenticate.ts'
-import SocketHandlers from './modules/socket/socket.handler.ts'
+import SocketHandlers, { GuestSocketHandlers } from './modules/socket/socket.handler.ts'
 import { PeerServer } from 'npm:peer'
-import ENV from './env.json' with { type: 'json' }
+import Env from './env.json' with { type: 'json' }
+import { AuthenticateGuest } from './middlewares/authenticate.ts'
 
 const { PORT } = Deno.env.toObject()
-PeerServer({
-  host: '127.0.0.1',
+const _Peer = PeerServer({
+  host: '192.168.3.19',
   port: 9000,
   path: '/video',
   key: 'peerjs',
@@ -16,8 +17,7 @@ PeerServer({
     origin: '*',
   },
 })
-
-void RedisProvider.connect()
+RedisProvider.connect()
 
 const server = createServer()
 const io = new Server(server, {
@@ -31,8 +31,8 @@ const io = new Server(server, {
   connectTimeout: 5000,
 })
 
-const memberChat = io.of(ENV.SOCKET_PATH.MEMBER)
-// const guestChat = io.of('/guest')
+const memberChat = io.of(Env.SOCKET_PATH.MEMBER)
+const guestChat = io.of(Env.SOCKET_PATH.GUEST)
 
 memberChat.use((socket: Socket, next) => {
   Authenticate.verifyToken(socket, next)
@@ -41,14 +41,14 @@ memberChat.use((socket: Socket, next) => {
 memberChat.on('connection', (socket) => {
   SocketHandlers.connect(io, socket)
 })
+guestChat.use((socket: Socket, next) => {
+  AuthenticateGuest.verify(socket, next)
+})
 
-// guestChat.use((socket: Socket, next) => {
-//   Authenticate.verifyToken(socket, next)
-// })
-// guestChat.on('connection', (socket) => {
-//   SocketHandlers.connect(io, socket)
-// })
+guestChat.on('connection', (socket) => {
+  GuestSocketHandlers.connect(io, socket)
+})
 
-server.listen(PORT ?? 8000, () => {
-  console.log(`Server running on port ${PORT ?? 8000}`)
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
 })

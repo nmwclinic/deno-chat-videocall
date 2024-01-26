@@ -5,9 +5,10 @@ import { type NewMessage } from '../../models/chat.ts'
 import HandleError from '../../utils/error.ts'
 import Connected from '../connected/connected.handlers.ts'
 import History from '../history-chat/history-chat.services.ts'
+import Env from '../../env.json' with { type: 'json' }
 
 const handler = (io: Server, socket: Socket): void => {
-  const memberChat = io.of('/chat')
+  const memberChat = io.of(Env.SOCKET_PATH.MEMBER)
   const backupChatToMongo = async (): Promise<void> => {
     try {
       if (socket.room === undefined) return
@@ -59,36 +60,7 @@ const handler = (io: Server, socket: Socket): void => {
 }
 
 const Guest = (io: Server, socket: Socket): void => {
-  const backupChatToMongo = async (): Promise<void> => {
-    try {
-      if (socket.room === undefined) return
-
-      const user_in_room = io.sockets.adapter.rooms.get(socket.room)
-      const user: string = socket.userInfo?.id ?? ''
-
-      if (user_in_room !== undefined) return
-      const response = await RedisProvider.getConnection().lrange(`chat-room:${socket.room}`, 0, -1)
-      await RedisProvider.getConnection().del(`chat-room:${socket.room}`)
-
-      const read_message: NewMessage[] = response.map((object) => JSON.parse(object))
-        .filter((element) => !element.readBy.includes(user))
-        .map((sub) => sub.id)
-
-      if (read_message) {
-        await History.readMessage(read_message, user, socket.room, socket.handshake.auth.token)
-      }
-
-      const new_message: NewMessage[] = response.map((object) => JSON.parse(object))
-        .filter((element) => element.id === undefined)
-        .sort((a, b) =>
-          DateTime.fromISO(a.createdAt as string).toMillis() - DateTime.fromISO(b.createdAt as string).toMillis()
-        )
-
-      await History.saveMessage(new_message, socket.room, socket.handshake.auth.token)
-    } catch (error: unknown) {
-      HandleError.message(error)
-    }
-  }
+  const guestChat = io.of(Env.SOCKET_PATH.GUEST)
   const disconnect = async (): Promise<void> => {
     try {
       if (socket.userInfo !== undefined && socket.room !== undefined) await socket.leave(socket.room)
@@ -96,13 +68,11 @@ const Guest = (io: Server, socket: Socket): void => {
       if (socket.userInfo === undefined) throw new Error('')
       await RedisProvider.getConnection().hdel('connected_users', socket.userInfo.id)
 
-      await backupChatToMongo()
-
       // Mengirimkan daftar koneksi yang tersisa
       const connected_users = await Connected.setConnectedUsers(socket)
 
       // Should this using to() ??
-      io.emit('connected_users', connected_users)
+      guestChat.emit('connected_users', connected_users)
     } catch (error: unknown) {
       HandleError.emitClient(socket, error)
     }
