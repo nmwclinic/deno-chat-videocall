@@ -19,8 +19,6 @@ const connect = (io: Server, socket: Socket): void => {
 }
 
 const guestConnect = (io: Server, socket: Socket): void => {
-  // Connected.handler(io, socket)
-
   Typing.handler(io, socket)
 
   GuestRoom.handler(io, socket)
