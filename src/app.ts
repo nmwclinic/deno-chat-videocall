@@ -8,8 +8,8 @@ import Env from './env.json' with { type: 'json' }
 import { AuthenticateGuest } from './middlewares/authenticate.ts'
 
 const { PORT } = Deno.env.toObject()
-const _Peer = PeerServer({
-  host: '192.168.3.19',
+PeerServer({
+  host: '127.0.0.1',
   port: 9000,
   path: '/video',
   key: 'peerjs',
