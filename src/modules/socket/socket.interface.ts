@@ -29,6 +29,7 @@ export interface DetailUserChat {
     image: string
   }
   conversation: {
+    type: string
     message: string
     createdAt: string
   }
